@@ -40,12 +40,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Configuration
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://greenpulse.vercel.app").split(",")
+# CORS Configuration - Allow all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in cors_origins],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when using allow_origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
