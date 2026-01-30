@@ -14,57 +14,68 @@ function Alerts() {
   const inputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
+  // Scroll to top on mount
   useEffect(() => {
-    // Scroll to top when component mounts
     window.scrollTo(0, 0);
+  }, []);
 
-    let autocomplete = null;
-
-    // Initialize Google Places Autocomplete on the land location input
+  // Initialize Google Places Autocomplete
+  useEffect(() => {
     const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (key) {
-      loadGoogleMaps(key)
-        .then((google) => {
-          if (!inputRef.current || autocompleteRef.current) return;
-          // Guard: Autocomplete may not be available for new customers; fallback gracefully
-          if (!google?.maps?.places?.Autocomplete) {
-            console.error(
-              "Places Autocomplete failed to load - check API key and billing",
-            );
-            return; // plain input works
-          }
-          const options = {
+    if (!key) return;
+
+    let listener = null;
+
+    const initAutocomplete = async () => {
+      try {
+        const google = await loadGoogleMaps(key);
+
+        // Wait for input to be ready
+        if (!inputRef.current) return;
+
+        // Check if Autocomplete is available
+        if (!google?.maps?.places?.Autocomplete) {
+          console.error(
+            "Places Autocomplete failed to load - check API key and billing",
+          );
+          return;
+        }
+
+        // Clean up existing autocomplete if any
+        if (autocompleteRef.current) {
+          google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
+
+        // Create new autocomplete instance
+        const autocomplete = new google.maps.places.Autocomplete(
+          inputRef.current,
+          {
             fields: ["formatted_address", "geometry", "name"],
             componentRestrictions: { country: "KE" },
-          };
-          autocomplete = new google.maps.places.Autocomplete(
-            inputRef.current,
-            options,
-          );
-          autocompleteRef.current = autocomplete;
+          },
+        );
 
-          autocomplete.addListener("place_changed", () => {
-            const place = autocomplete.getPlace();
-            const value = place?.formatted_address || place?.name;
-            if (value) setLandLocation(value);
-          });
-        })
-        .catch((err) => {
-          // Non-blocking: log and continue without autocomplete
-          console.warn("Google Maps script load failed:", err);
+        autocompleteRef.current = autocomplete;
+
+        listener = autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          const value = place?.formatted_address || place?.name;
+          if (value) setLandLocation(value);
         });
-    }
+      } catch (err) {
+        console.warn("Google Maps script load failed:", err);
+      }
+    };
 
-    // Cleanup function to remove listeners and prevent memory leaks
+    initAutocomplete();
+
+    // Cleanup
     return () => {
-      if (autocompleteRef.current && window.google) {
+      if (listener && window.google) {
         try {
-          window.google.maps.event.clearInstanceListeners(
-            autocompleteRef.current,
-          );
-          autocompleteRef.current = null;
-        } catch (error) {
-          console.warn("Error cleaning up autocomplete:", error);
+          window.google.maps.event.removeListener(listener);
+        } catch (e) {
+          // ignore
         }
       }
     };
@@ -721,11 +732,11 @@ function Alerts() {
                 </div>
                 <div className="bg-white/95 backdrop-blur-sm border-2 border-white/50 rounded-xl p-6 shadow-md hover:bg-white transition">
                   <h4 className="font-bold text-lg mb-2 text-green-700">
-                    AI Insights
+                    Conservation Analysis
                   </h4>
                   <p className="text-gray-700 text-sm">
-                    Practical recommendations from AI for farmers and land
-                    managers
+                    AI-powered environmental assessments with actionable
+                    decision recommendations
                   </p>
                 </div>
               </div>

@@ -18,6 +18,7 @@ function Reports() {
   const [coords, setCoords] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileError, setFileError] = useState("");
+  const [expandedReports, setExpandedReports] = useState({});
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const autocompleteRef = useRef(null);
@@ -158,18 +159,15 @@ function Reports() {
 
       // Transform data to match our UI format
       const transformedReports = data.map((report) => {
-        const [derivedTitle, derivedBody] = splitDescription(
-          report.description || "",
-        );
         return {
           id: report.id,
           region: report.region,
-          title: derivedTitle,
-          description: derivedBody,
+          title: report.report_type || "Community Report",
+          description: report.description || "",
           reportedAt: (report.created_at || new Date().toISOString()).split(
             "T",
           )[0],
-          reporterName: "Community Member", // For privacy, we'll use generic name
+          reporterName: "Community Member",
         };
       });
 
@@ -259,13 +257,12 @@ function Reports() {
 
       const reportData = {
         region: formData.region,
-        report_type: "community_observation",
-        description: `${titleTrim}\n\n${bodyTrim}`,
+        report_type: titleTrim,
+        description: bodyTrim,
         status: "pending",
         verified: false,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
-        attachment_url: attachmentUrl,
       };
 
       console.log("Attempting to submit report to Supabase...");
@@ -699,13 +696,13 @@ function Reports() {
                     reports.map((report) => (
                       <div
                         key={report.id}
-                        className="bg-white/95 backdrop-blur-sm rounded-xl shadow-md p-6 hover:shadow-lg hover:bg-white transition"
+                        className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md p-4 hover:shadow-lg hover:bg-white transition"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                        <div className="flex items-start justify-between mb-2">
+                          <span className="px-2.5 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                             {report.region}
                           </span>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-xs text-gray-500">
                             {new Date(report.reportedAt).toLocaleDateString(
                               "en-US",
                               {
@@ -715,17 +712,37 @@ function Reports() {
                             )}
                           </span>
                         </div>
-                        <h3 className="text-2xl font-extrabold tracking-tight text-gray-900 mb-1">
+                        <h3 className="text-base font-medium text-gray-900 mb-1">
                           {report.title}
                         </h3>
-                        {report.description &&
-                          report.description.trim() !== report.title.trim() && (
-                            <p className="text-gray-700 leading-relaxed mb-4 whitespace-pre-line font-normal">
+                        {report.description && (
+                          <div className="mb-3">
+                            <p
+                              className={`text-sm text-gray-600 leading-snug font-normal ${
+                                expandedReports[report.id] ? "" : "line-clamp-2"
+                              }`}
+                            >
                               {report.description}
                             </p>
-                          )}
-                        <p className="text-sm text-gray-500">
-                          Reported by: <strong>{report.reporterName}</strong>
+                            {report.description.length > 100 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedReports((prev) => ({
+                                    ...prev,
+                                    [report.id]: !prev[report.id],
+                                  }))
+                                }
+                                className="text-xs text-green-600 hover:text-green-800 mt-1 font-medium"
+                              >
+                                {expandedReports[report.id]
+                                  ? "Read less"
+                                  : "Read more"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500 font-normal">
+                          Reported by: {report.reporterName}
                         </p>
                       </div>
                     ))
